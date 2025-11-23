@@ -1,0 +1,1801 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WOO's game</title>
+    <style>
+        :root {
+            --bg-color: #121214;
+            --panel-color: #1e1e24;
+            --text-color: #e0e0e0;
+            --accent-color: #00a8ff;
+            --highlight-color: #ffeaa7;
+        }
+
+        body {
+            margin: 0;
+            background-color: var(--bg-color);
+            color: var(--text-color);
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            overflow: hidden;
+            user-select: none;
+        }
+
+        h1 {
+            font-size: 1.2rem;
+            margin: 5px 0;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #81ecec;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        #game-container {
+            position: relative;
+            box-shadow: 0 0 20px rgba(0, 0, 0, 0.5);
+            border: 2px solid #333;
+            background: #000;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            cursor: crosshair;
+        }
+
+        #ui-panel {
+            margin-top: 10px;
+            background: var(--panel-color);
+            padding: 10px 20px;
+            border-radius: 8px;
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            justify-content: center;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3);
+            max-width: 900px;
+        }
+
+        .section-label {
+            width: 100%;
+            text-align: center;
+            font-size: 0.7rem;
+            color: #666;
+            margin-bottom: 2px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .tool-btn {
+            background: #2f3640;
+            border: 2px solid #444;
+            color: #fff;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.1s;
+            text-transform: uppercase;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+        }
+
+        .tool-btn:hover {
+            background: #353b48;
+            transform: translateY(-1px);
+        }
+
+        .tool-btn.active {
+            border-color: #fff;
+            box-shadow: 0 0 8px rgba(255, 255, 255, 0.3);
+        }
+
+        /* Tool Colors */
+        #btn-select {
+            border-bottom: 4px solid #fff;
+        }
+
+        #btn-wall {
+            border-bottom: 4px solid #808080;
+        }
+
+        #btn-sand {
+            border-bottom: 4px solid #e1b12c;
+        }
+
+        #btn-creeper {
+            border-bottom: 4px solid #4834d4;
+        }
+
+        #btn-anticreeper {
+            border-bottom: 4px solid #dfe6e9;
+        }
+
+        #btn-emitter {
+            border-bottom: 4px solid #ff4757;
+        }
+
+        #btn-ac-emitter {
+            border-bottom: 4px solid #74b9ff;
+        }
+
+        #btn-build-fighter {
+            border-bottom: 4px solid #fab1a0;
+        }
+
+        #btn-build-nullifier {
+            border-bottom: 4px solid #a29bfe;
+        }
+
+        #btn-build-sprayer {
+            border-bottom: 4px solid #74b9ff;
+        }
+
+        #btn-mine {
+            border-bottom: 4px solid #00b894;
+        }
+
+        .info-panel {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background: rgba(0, 0, 0, 0.8);
+            color: #fff;
+            padding: 5px 10px;
+            border-radius: 4px;
+            font-size: 0.75rem;
+            pointer-events: none;
+            white-space: pre-wrap;
+            border: 1px solid #444;
+        }
+
+        /* Settings Panel for Emitters */
+        #settings-panel {
+            margin-top: 5px;
+            background: #2d3436;
+            padding: 8px;
+            border-radius: 4px;
+            display: none;
+            /* Hidden until selected */
+            flex-direction: column;
+            gap: 5px;
+            width: 100%;
+            max-width: 600px;
+        }
+
+        .setting-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+        }
+
+        input[type=range] {
+            width: 150px;
+            cursor: pointer;
+        }
+
+        #ship-controls {
+            position: absolute;
+            color: #ff4757;
+            font-size: 0.8rem;
+            margin-left: 10px;
+            display: none;
+        }
+
+        #stats-overlay {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            width: 250px;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            gap: 5px;
+        }
+
+        .stat-bar-container {
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 4px;
+            padding: 5px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .stat-label {
+            font-size: 12px;
+            color: #ccc;
+            margin-bottom: 2px;
+            display: flex;
+            justify-content: space-between;
+        }
+
+        .stat-bar-bg {
+            width: 100%;
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+        }
+
+        .stat-bar-fill {
+            height: 100%;
+            width: 0%;
+            transition: width 0.2s;
+        }
+
+        #bar-creeper {
+            background: #4040ff;
+        }
+
+        #bar-ac {
+            background: #dcdcdc;
+        }
+    </style>
+</head>
+
+<body>
+
+    <h1>WOO's game <span style="font-size: 0.8em; color: #666;">| Base Builder</span></h1>
+
+    <div id="game-container">
+        <canvas id="simCanvas" width="300" height="200" style="width: 900px; height: 600px;"></canvas>
+        <div id="cursor-info" class="info-panel" style="right: 10px; left: auto; top: 10px;">Hover Info</div>
+        <div id="ship-controls">Ship Selected: Click to Move</div>
+        <div id="power-bar-container">
+            <div id="power-bar-fill"></div>
+            <span id="power-text">Apex Power: 0 / 1000</span>
+        </div>
+        <div id="stats-overlay">
+            <div class="stat-bar-container">
+                <div class="stat-label">
+                    <span>Creeper</span>
+                    <span id="val-creeper">0</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div id="bar-creeper" class="stat-bar-fill"></div>
+                </div>
+            </div>
+            <div class="stat-bar-container">
+                <div class="stat-label">
+                    <span>Anti-Creeper</span>
+                    <span id="val-ac">0</span>
+                </div>
+                <div class="stat-bar-bg">
+                    <div id="bar-ac" class="stat-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="ui-panel">
+        <div class="section-label">Tools</div>
+        <button class="tool-btn" id="btn-select" onclick="setTool('select')">👆 Select</button>
+        <button class="tool-btn" id="btn-build-fighter" onclick="setTool('build_fighter')">🛠️ Build Fighter</button>
+        <button class="tool-btn" id="btn-build-sprayer" onclick="setTool('build_sprayer')">🚿 Sprayer</button>
+        <button class="tool-btn" id="btn-build-nullifier" onclick="setTool('build_nullifier')">🚫 Nullifier</button>
+        <span id="limit-warning">MAX UNITS REACHED</span>
+
+        <div style="width: 1px; background: #444; margin: 0 5px;"></div>
+
+        <button class="tool-btn" id="btn-wall" onclick="setTool(1)">🧱 Wall</button>
+        <button class="tool-btn" id="btn-sand" onclick="setTool(2)">⏳ Sand</button>
+        <button class="tool-btn" id="btn-creeper" onclick="setTool(3)">💧 Creeper</button>
+        <button class="tool-btn" id="btn-anticreeper" onclick="setTool(4)">🛡️ AC</button>
+
+        <div style="width: 1px; background: #444; margin: 0 5px;"></div>
+
+        <button class="tool-btn active" id="btn-emitter" onclick="setTool('emitter')">⚠️ Emit C</button>
+        <button class="tool-btn" id="btn-mine" onclick="setTool(0)">⛏️ Mine</button>
+
+        <!-- Emitter Settings (Contextual) -->
+        <div id="settings-panel">
+            <div class="section-label" style="color: #ffeaa7; margin-bottom: 5px;">Selected Emitter Settings</div>
+            <div class="setting-row">
+                <span>Spawn Radius: <span id="val-radius">1</span></span>
+                <input type="range" id="inp-radius" min="0" max="10" step="1"
+                    oninput="updateEmitterSetting('radius', this.value)">
+            </div>
+            <div class="setting-row">
+                <span>Intensity (Density): <span id="val-amount">5</span></span>
+                <input type="range" id="inp-amount" min="1" max="50" step="1"
+                    oninput="updateEmitterSetting('amount', this.value)">
+            </div>
+            <div class="setting-row">
+                <label>Rate:</label>
+                <span id="val-rate">5</span>
+                <input type="range" id="inp-rate" min="1" max="60" step="1"
+                    oninput="updateEmitterSetting('rate', this.value)">
+            </div>
+            <button id="btn-toggle-mode" class="tool-btn" style="margin-top: 10px; display: none;"
+                onclick="toggleSprayerMode()">Mode: Always</button>
+        </div>
+    </div>
+
+    <script>
+        // --- CONFIGURATION ---
+        const canvas = document.getElementById('simCanvas');
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+        const cursorInfo = document.getElementById('cursor-info');
+        const settingsPanel = document.getElementById('settings-panel');
+        const shipControls = document.getElementById('ship-controls');
+        const limitWarning = document.getElementById('limit-warning');
+
+        // Material Types
+        const EMPTY = 0;
+        const WALL = 1;
+        const SAND = 2;
+        const CREEPER = 3;
+        const ANTI_CREEPER = 4;
+        const AC_PARTICLE = 5;
+
+        const AC_PARTICLE_AMOUNT = 30.0;
+
+        const MARKED_MASK = 128;
+        const TYPE_MASK = 127;
+
+        // Physics Constants
+        const GRAVITY = 0.2;
+        const TERMINAL_VELOCITY = 3.0;
+        const BUILD_RANGE = 80;
+        const MAX_FIGHTERS = 5;
+
+        // Projectile Constants
+        const PROJ_SPEED = 4.0;
+        const PROJ_EXPLOSION_RADIUS = 8;
+        const MISSILE_EXPLOSION_RADIUS = 20; // New radius for Apex missiles
+        const MISSILE_MIN_DENSITY_TARGET = 5.0; // Min density required to fire a missile
+
+        const properties = {
+            [EMPTY]: { color: [0, 0, 0], density: 0, liquid: false, solid: false },
+            [WALL]: { color: [100, 100, 100], density: 1000, liquid: false, solid: true },
+            [SAND]: { color: [225, 177, 44], density: 10, liquid: false, solid: true },
+            [CREEPER]: { color: [64, 64, 255], density: 1.0, liquid: true, solid: false },
+            [ANTI_CREEPER]: { color: [220, 220, 255], density: 1.0, liquid: true, solid: false },
+            [AC_PARTICLE]: { color: [0, 200, 255], density: 10, liquid: false, solid: true } // Acts solid for movement
+        };
+
+        // GLOBAL DATA STRUCTURES
+        let grid = new Uint32Array(width * height); // Changed to Uint32 to handle flags safely
+        let densityGrid = new Float32Array(width * height);
+        let entities = [];
+        let projectiles = [];
+        let packets = [];
+
+        // --- ENTITY SYSTEM ---
+        class Entity {
+            constructor(x, y, type) {
+                this.x = x;
+                this.y = y;
+                this.type = type; // 'EMITTER', 'AC_EMITTER', 'APEX', 'FIGHTER', 'NULLIFIER', 'SPRAYER'
+                this.vx = 0;
+                this.vy = 0;
+                this.width = 10;
+                this.height = 10;
+                this.dead = false;
+                this.built = true; // Default true, false for player buildings
+                this.buildProgress = 0;
+                this.buildReq = 0;
+                this.power = 0;
+                this.maxPower = 0;
+
+                // Emitter Stats
+                if (type === 'EMITTER' || type === 'AC_EMITTER') {
+                    this.spawnType = (type === 'AC_EMITTER') ? ANTI_CREEPER : CREEPER;
+                    this.spawnRadius = 2;
+                    this.spawnAmount = 5.0;
+                    this.productionRate = 5;
+                    this.productionTimer = 0;
+                }
+
+                // Ship Stats
+                if (type === 'APEX' || type === 'FIGHTER' || type === 'SPRAYER') {
+                    this.targetX = x;
+                    this.targetY = y;
+                    this.fireTimer = 0;
+
+                    if (type === 'APEX') {
+                        this.width = 11;
+                        this.height = 15;
+                        this.fireRate = 45; // Slower fire rate for heavy missile
+                        this.moveSpeed = 1.0;
+                        this.packetTimer = 0;
+                        this.miningRange = 80;
+                        this.maxPower = 1000;
+                        this.power = 1000; // Starts full
+                    } else if (type === 'FIGHTER') {
+                        this.width = 7;
+                        this.height = 7;
+                        this.fireRate = 20; // Faster for fighters
+                        this.moveSpeed = 1.8;
+                        this.built = false; // Starts unbuilt
+                        this.buildReq = 20; // Needs 20 packets
+                        this.maxPower = 100;
+                        this.power = 0; // Starts empty
+                    } else if (type === 'SPRAYER') {
+                        this.width = 7;
+                        this.height = 7;
+                        this.fireRate = 20; // Slower fire
+                        this.moveSpeed = 1.5;
+                        this.built = false;
+                        this.buildReq = 25;
+                        this.mode = 0; // 0 = Always, 1 = Smart
+                    }
+                }
+
+                // Nullifier Stats
+                if (type === 'NULLIFIER') {
+                    this.width = 6;
+                    this.height = 6;
+                    this.built = false;
+                    this.buildReq = 50; // Needs 50 packets
+                    this.charge = 0;
+                    this.range = 100;
+                    this.target = null;
+                }
+            }
+        }
+
+        class Packet {
+            constructor(x, y, target, type = 'BUILD', value = 1) {
+                this.x = x;
+                this.y = y;
+                this.target = target;
+                this.speed = 3.0;
+                this.dead = false;
+                this.type = type; // 'BUILD' or 'POWER'
+                this.value = value;
+            }
+        }
+
+        class Projectile {
+            constructor(x, y, vx, vy, isMissile = false, isParticle = false) {
+                this.x = x;
+                this.y = y;
+                this.vx = vx;
+                this.vy = vy;
+                this.life = isMissile ? 120 : (isParticle ? 100 : 60);
+                this.dead = false;
+                this.isMissile = isMissile;
+                this.isParticle = isParticle;
+                this.explosionRadius = isMissile ? MISSILE_EXPLOSION_RADIUS : PROJ_EXPLOSION_RADIUS;
+            }
+        }
+
+        // Rendering Buffers
+        let imgData = ctx.createImageData(width, height);
+        let buf32 = new Uint32Array(imgData.data.buffer);
+
+        // --- UI / INPUT ---
+        function setTool(tool) {
+            currentTool = tool;
+            if (tool !== 'select') {
+                selectedEntity = null;
+                settingsPanel.style.display = 'none';
+                shipControls.style.display = 'none';
+                document.getElementById('btn-toggle-mode').style.display = 'none'; // Hide sprayer mode button
+            }
+            updateUI();
+        }
+
+        // Initial tool state
+        let currentTool = 'emitter';
+        let isMouseDown = false;
+        let isRightClick = false;
+        let frameCount = 0;
+        let selectedEntity = null;
+
+        function updateUI() {
+            document.querySelectorAll('.tool-btn').forEach(b => b.classList.remove('active'));
+            const btnMap = {
+                'select': 'btn-select', 'emitter': 'btn-emitter', 'ac_emitter': 'btn-ac-emitter',
+                'build_fighter': 'btn-build-fighter', 'build_nullifier': 'btn-build-nullifier', 'build_sprayer': 'btn-build-sprayer',
+                1: 'btn-wall', 2: 'btn-sand', 3: 'btn-creeper', 4: 'btn-anticreeper', 0: 'btn-mine'
+            };
+            if (btnMap[currentTool]) document.getElementById(btnMap[currentTool]).classList.add('active');
+
+            // Limit Warning
+            const fighterCount = entities.filter(e => e.type === 'FIGHTER').length;
+            if (fighterCount >= MAX_FIGHTERS) limitWarning.style.display = 'inline';
+            else limitWarning.style.display = 'none';
+        }
+
+        function updateEmitterSetting(key, val) {
+            if (!selectedEntity || ['APEX', 'FIGHTER', 'SPRAYER'].includes(selectedEntity.type)) return;
+            val = parseFloat(val);
+            if (key === 'radius') selectedEntity.spawnRadius = val;
+            if (key === 'amount') selectedEntity.spawnAmount = val;
+            if (key === 'rate') selectedEntity.productionRate = val;
+            updateSettingsValues();
+        }
+
+        function toggleSprayerMode() {
+            if (selectedEntity && selectedEntity.type === 'SPRAYER') {
+                selectedEntity.mode = (selectedEntity.mode + 1) % 2;
+                updateSprayerUI();
+            }
+        }
+
+        function updateSprayerUI() {
+            const btn = document.getElementById('btn-toggle-mode');
+            if (selectedEntity && selectedEntity.type === 'SPRAYER') {
+                btn.style.display = 'block';
+                btn.innerText = `Mode: ${selectedEntity.mode === 0 ? 'Always' : 'Smart'}`;
+            } else {
+                btn.style.display = 'none';
+            }
+        }
+
+        function updateSettingsValues() {
+            if (!selectedEntity || ['APEX', 'FIGHTER', 'SPRAYER'].includes(selectedEntity.type)) return;
+            document.getElementById('val-radius').innerText = selectedEntity.spawnRadius;
+            document.getElementById('val-amount').innerText = selectedEntity.spawnAmount;
+            document.getElementById('val-rate').innerText = selectedEntity.productionRate;
+            document.getElementById('inp-radius').value = selectedEntity.spawnRadius;
+            document.getElementById('inp-amount').value = selectedEntity.spawnAmount;
+            document.getElementById('inp-rate').value = selectedEntity.productionRate;
+        }
+
+        function getMousePos(evt) {
+            const rect = canvas.getBoundingClientRect();
+            return {
+                x: (evt.clientX - rect.left) * (canvas.width / rect.width),
+                y: (evt.clientY - rect.top) * (canvas.height / rect.height)
+            };
+        }
+
+        // Mouse Interaction
+        canvas.addEventListener('mousedown', e => {
+            isMouseDown = true;
+            isRightClick = e.button === 2;
+            const pos = getMousePos(e);
+
+            if (currentTool === 'select') {
+                if (selectedEntity && ['APEX', 'FIGHTER', 'SPRAYER'].includes(selectedEntity.type) && !isRightClick && selectedEntity.built) {
+                    // Move Command
+                    const clicked = entities.find(ent =>
+                        Math.abs(ent.x - pos.x) < ent.width && Math.abs(ent.y - pos.y) < ent.height
+                    );
+                    if (!clicked) {
+                        selectedEntity.targetX = pos.x;
+                        selectedEntity.targetY = pos.y;
+                        return;
+                    }
+                }
+
+                // Select Entity
+                const clicked = entities.find(ent =>
+                    Math.abs(ent.x - pos.x) < ent.width && Math.abs(ent.y - pos.y) < ent.height
+                );
+
+                if (clicked) {
+                    selectedEntity = clicked;
+                    if (clicked.type === 'EMITTER' || clicked.type === 'AC_EMITTER') {
+                        settingsPanel.style.display = 'flex';
+                        shipControls.style.display = 'none';
+                        document.getElementById('btn-toggle-mode').style.display = 'none'; // Hide sprayer mode button
+                        updateSettingsValues();
+                    } else if (['APEX', 'FIGHTER', 'SPRAYER'].includes(clicked.type)) {
+                        settingsPanel.style.display = 'none';
+                        shipControls.style.display = 'block';
+                        shipControls.innerText = clicked.built ? `${clicked.type} Selected: Click to Move` : "Under Construction...";
+
+                        if (clicked.type === 'SPRAYER') {
+                            settingsPanel.style.display = 'flex'; // Show settings for Sprayer mode
+                            updateSprayerUI();
+                        } else {
+                            document.getElementById('btn-toggle-mode').style.display = 'none';
+                        }
+                    }
+                } else {
+                    selectedEntity = null;
+                    settingsPanel.style.display = 'none';
+                    shipControls.style.display = 'none';
+                    document.getElementById('btn-toggle-mode').style.display = 'none'; // Hide sprayer mode button
+                }
+            }
+            else if (currentTool === 'build_fighter') {
+                // Building Logic
+                if (!isRightClick) {
+                    // 1. Check Limits
+                    const fighterCount = entities.filter(e => e.type === 'FIGHTER').length;
+                    if (fighterCount >= MAX_FIGHTERS) return;
+
+                    // 2. Check Range to Apex
+                    const apex = entities.find(e => e.type === 'APEX');
+                    if (apex) {
+                        const d = Math.sqrt((pos.x - apex.x) ** 2 + (pos.y - apex.y) ** 2);
+                        if (d <= BUILD_RANGE) {
+                            entities.push(new Entity(pos.x, pos.y, 'FIGHTER'));
+                            updateUI();
+                        }
+                    }
+                }
+            }
+            else if (currentTool === 'build_nullifier') {
+                if (!isRightClick) {
+                    const apex = entities.find(e => e.type === 'APEX');
+                    if (apex) {
+                        const d = Math.sqrt((pos.x - apex.x) ** 2 + (pos.y - apex.y) ** 2);
+                        if (d <= BUILD_RANGE) {
+                            entities.push(new Entity(pos.x, pos.y, 'NULLIFIER'));
+                        }
+                    }
+                }
+            }
+            else if (currentTool === 'build_sprayer') {
+                if (!isRightClick) {
+                    const apex = entities.find(e => e.type === 'APEX');
+                    if (apex) {
+                        const d = Math.sqrt((pos.x - apex.x) ** 2 + (pos.y - apex.y) ** 2);
+                        if (d <= BUILD_RANGE) {
+                            entities.push(new Entity(pos.x, pos.y, 'SPRAYER'));
+                        }
+                    }
+                }
+            }
+            else if (['emitter', 'ac_emitter'].includes(currentTool)) {
+                if (!isRightClick) {
+                    let type = (currentTool === 'emitter') ? 'EMITTER' : 'AC_EMITTER';
+                    entities.push(new Entity(pos.x, pos.y, type));
+                }
+            }
+            else {
+                handlePaint(pos);
+            }
+        });
+
+        canvas.addEventListener('mousemove', e => {
+            const pos = getMousePos(e);
+
+            // Tooltip
+            const tx = Math.floor(pos.x);
+            const ty = Math.floor(pos.y);
+            if (tx >= 0 && tx < width && ty >= 0 && ty < height) {
+                const idx = ty * width + tx;
+                const rawType = grid[idx];
+                const type = rawType & TYPE_MASK;
+                const marked = (rawType & MARKED_MASK) !== 0;
+                const density = densityGrid[idx];
+                let name = "Empty";
+                if (type === WALL) name = "Wall";
+                if (type === SAND) name = "Sand";
+                if (type === CREEPER) name = "Creeper";
+                if (type === ANTI_CREEPER) name = "Anti-Creeper";
+                if (type === AC_PARTICLE) name = "AC Particle";
+
+                cursorInfo.innerText = `${name}${marked ? ' (Marked)' : ''}\nDensity: ${density.toFixed(1)}`;
+            }
+
+            if (isMouseDown && typeof currentTool === 'number') {
+                handlePaint(pos);
+            }
+        });
+
+        window.addEventListener('mouseup', () => isMouseDown = false);
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        function handlePaint(pos) {
+            const radius = 3;
+            const type = isRightClick ? EMPTY : currentTool;
+            const px = Math.floor(pos.x);
+            const py = Math.floor(pos.y);
+
+            for (let y = -radius; y <= radius; y++) {
+                for (let x = -radius; x <= radius; x++) {
+                    if (x * x + y * y <= radius * radius) {
+                        if (currentTool === 0) { // Mine Tool
+                            const idx = (py + y) * width + (px + x);
+                            if (idx >= 0 && idx < grid.length) {
+                                if (isRightClick) {
+                                    grid[idx] &= ~MARKED_MASK; // Unmark
+                                } else {
+                                    const t = grid[idx] & TYPE_MASK;
+                                    if (t === WALL || t === SAND) {
+                                        grid[idx] |= MARKED_MASK; // Mark
+                                    }
+                                }
+                            }
+                        } else {
+                            setCell(px + x, py + y, type);
+                        }
+                    }
+                }
+            }
+        }
+
+        function setCell(x, y, type) {
+            if (x < 0 || x >= width || y < 0 || y >= height) return;
+            const idx = y * width + x;
+            const currentType = grid[idx] & TYPE_MASK;
+            if (currentType === WALL && type !== EMPTY && type !== WALL) return;
+
+            // Preserve mark if not overwriting with EMPTY (unless erasing)
+            const mark = (grid[idx] & MARKED_MASK);
+            grid[idx] = type | (type === EMPTY ? 0 : mark);
+
+            if (properties[type].liquid) {
+                if (densityGrid[idx] < 1.0) densityGrid[idx] = 1.0;
+            } else if (properties[type].solid) {
+                densityGrid[idx] = 100; // Max Health for solids
+            } else {
+                densityGrid[idx] = 0;
+            }
+        }
+
+        // --- PHYSICS ENGINE ---
+
+        function updateEntities() {
+            // Find Apex for building logic
+            const apex = entities.find(e => e.type === 'APEX');
+
+            // 1. Packet Generation (Apex logic)
+            if (apex && apex.built) {
+                // Generate Power
+                apex.power = Math.min(apex.maxPower, apex.power + 4.0); // Increased generation
+
+                // Find unbuilt fighters or nullifiers or sprayers
+                const blueprints = entities.filter(e => (e.type === 'FIGHTER' || e.type === 'NULLIFIER' || e.type === 'SPRAYER') && !e.built);
+                if (blueprints.length > 0) {
+                    apex.packetTimer++;
+                    if (apex.packetTimer >= 5) { // Emit packet every 5 frames
+                        packets.push(new Packet(apex.x, apex.y, blueprints[0], 'BUILD', 1));
+                        apex.packetTimer = 0;
+                    }
+                }
+
+                // Distribute Power
+                if (apex.power >= 10) {
+                    const hungryShips = entities.filter(e => e.type === 'FIGHTER' && e.built && e.power < e.maxPower * 0.5);
+                    if (hungryShips.length > 0) {
+                        // Simple round-robin or random for now
+                        const target = hungryShips[Math.floor(Math.random() * hungryShips.length)];
+                        packets.push(new Packet(apex.x, apex.y, target, 'POWER', 10));
+                        apex.power -= 10;
+                    }
+                }
+            }
+
+            for (let i = entities.length - 1; i >= 0; i--) {
+                let ent = entities[i];
+
+                // Ship Physics
+                if (['APEX', 'FIGHTER', 'SPRAYER'].includes(ent.type)) {
+
+                    if (ent.built) {
+                        updateShipPhysics(ent);
+                    } else {
+                        // Blueprint Logic: Floating slightly, static
+                        ent.vy = 0;
+                        ent.grounded = true;
+                    }
+
+                    if (ent.dead) {
+                        entities.splice(i, 1);
+                        if (selectedEntity === ent) {
+                            selectedEntity = null;
+                            shipControls.style.display = 'none';
+                            document.getElementById('btn-toggle-mode').style.display = 'none'; // Hide sprayer mode button
+                        }
+                        updateUI();
+                    }
+                    continue;
+                }
+
+                if (ent.type === 'NULLIFIER') {
+                    if (ent.built) {
+                        updateNullifier(ent);
+                    } else {
+                        ent.vy = 0;
+                        ent.grounded = true;
+                    }
+                    if (ent.dead) {
+                        entities.splice(i, 1);
+                    }
+                }
+
+                if (ent.dead) {
+                    entities.splice(i, 1);
+                    continue;
+                }
+
+                // Standard Gravity for Emitters
+                if (!ent.grounded) {
+                    ent.vy += GRAVITY;
+                    if (ent.vy > TERMINAL_VELOCITY) ent.vy = TERMINAL_VELOCITY;
+                }
+
+                let hitSolid = false;
+                const bottomY = Math.floor(ent.y + ent.height / 2);
+                if (bottomY >= height - 1) {
+                    hitSolid = true;
+                    ent.y = height - 1 - ent.height / 2;
+                } else {
+                    const idx = bottomY * width + Math.floor(ent.x);
+                    const tile = grid[idx];
+                    if (properties[tile] && properties[tile].solid) hitSolid = true;
+                }
+
+                if (hitSolid) {
+                    if (ent.vy > 0) { ent.vy = 0; ent.grounded = true; ent.y = Math.floor(ent.y); }
+                } else {
+                    ent.grounded = false;
+                }
+                ent.y += ent.vy;
+
+                // Emitter Production
+                ent.productionTimer++;
+                if (ent.productionTimer >= ent.productionRate) {
+                    ent.productionTimer = 0;
+                    const cx = Math.floor(ent.x);
+                    const cy = Math.floor(ent.y);
+                    const r = Math.floor(ent.spawnRadius);
+
+                    for (let dy = -r; dy <= r; dy++) {
+                        for (let dx = -r; dx <= r; dx++) {
+                            const sx = cx + dx;
+                            const sy = cy + dy;
+                            if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                                const idx = sy * width + sx;
+                                const currentType = grid[idx];
+
+                                if (currentType === EMPTY) {
+                                    grid[idx] = ent.spawnType;
+                                    densityGrid[idx] += ent.spawnAmount;
+                                } else if (currentType === ent.spawnType) {
+                                    densityGrid[idx] += ent.spawnAmount;
+                                } else if (properties[currentType].liquid) {
+                                    densityGrid[idx] -= ent.spawnAmount;
+                                    if (densityGrid[idx] <= 0) {
+                                        grid[idx] = ent.spawnType;
+                                        densityGrid[idx] = Math.abs(densityGrid[idx]);
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function checkLineOfSight(x0, y0, x1, y1, checkCreeper = false) {
+            x0 = Math.floor(x0);
+            y0 = Math.floor(y0);
+            x1 = Math.floor(x1);
+            y1 = Math.floor(y1);
+
+            const dx = Math.abs(x1 - x0);
+            const dy = Math.abs(y1 - y0);
+            const sx = (x0 < x1) ? 1 : -1;
+            const sy = (y0 < y1) ? 1 : -1;
+            let err = dx - dy;
+
+            while (true) {
+                if (x0 === x1 && y0 === y1) break;
+
+                const idx = y0 * width + x0;
+                if (idx >= 0 && idx < grid.length) {
+                    const type = grid[idx] & TYPE_MASK;
+                    if (type === WALL || type === SAND) return false;
+                    if (checkCreeper && type === CREEPER) return false;
+                }
+
+                const e2 = 2 * err;
+                if (e2 > -dy) { err -= dy; x0 += sx; }
+                if (e2 < dx) { err += dx; y0 += sy; }
+            }
+            return true;
+        }
+
+        function updateNullifier(nullifier) {
+            // Find Target
+            let target = null;
+            let minDist = nullifier.range;
+
+            // Look for Emitters
+            for (let e of entities) {
+                if (e.type === 'EMITTER' && !e.dead) {
+                    const d = Math.sqrt((e.x - nullifier.x) ** 2 + (e.y - nullifier.y) ** 2);
+                    if (d <= nullifier.range) {
+                        if (d < minDist) {
+                            minDist = d;
+                            target = e;
+                        }
+                    }
+                }
+            }
+
+            nullifier.target = target;
+
+            if (target) {
+                // Check LOS (including Creeper)
+                const hasLOS = checkLineOfSight(nullifier.x, nullifier.y, target.x, target.y, true);
+
+                if (hasLOS) {
+                    nullifier.charge += 1.0 / 240.0; // 4 seconds
+                    if (nullifier.charge >= 1.0) {
+                        nullifier.charge = 1.0;
+                        // FIRE
+                        target.dead = true;
+                        nullifier.dead = true; // Consumed
+                        createExplosion(target.x, target.y, 20);
+                        createExplosion(nullifier.x, nullifier.y, 10);
+                    }
+                } else {
+                    nullifier.charge -= 1.0 / 480.0; // Discharge slowly
+                }
+            } else {
+                nullifier.charge -= 1.0 / 480.0;
+            }
+
+            if (nullifier.charge < 0) nullifier.charge = 0;
+        }
+
+        function updateShipPhysics(ship) {
+            // 1. Movement
+            const dx = ship.targetX - ship.x;
+            const dy = ship.targetY - ship.y;
+            const dist = Math.sqrt(dx * dx + dy * dy);
+
+            if (dist > 1) {
+                const moveX = (dx / dist) * ship.moveSpeed;
+                const moveY = (dy / dist) * ship.moveSpeed;
+                ship.x += moveX;
+                ship.y += moveY;
+            }
+
+            // 2. Death Collision
+            const cx = Math.floor(ship.x);
+            const cy = Math.floor(ship.y);
+            let touchingCreeper = false;
+            const r = Math.floor(ship.width / 2);
+            for (let dy = -r; dy <= r; dy++) {
+                for (let dx = -r; dx <= r; dx++) {
+                    const sx = cx + dx;
+                    const sy = cy + dy;
+                    if (sx >= 0 && sx < width && sy >= 0 && sy < height) {
+                        if (grid[sy * width + sx] === CREEPER) {
+                            touchingCreeper = true;
+                            break;
+                        }
+                    }
+                }
+                if (touchingCreeper) break;
+            }
+
+            if (touchingCreeper) {
+                ship.dead = true;
+                createExplosion(cx, cy, 15, true); // Destroy terrain on ship death? Maybe not. Let's say yes for impact.
+                return;
+            }
+
+            // 2.5 Mining Logic (Apex Only)
+            if (ship.type === 'APEX') {
+                const r = ship.miningRange;
+                const rSq = r * r;
+                const startX = Math.floor(ship.x - r);
+                const endX = Math.floor(ship.x + r);
+                const startY = Math.floor(ship.y - r);
+                const endY = Math.floor(ship.y + r);
+
+                for (let y = startY; y <= endY; y++) {
+                    for (let x = startX; x <= endX; x++) {
+                        if (x >= 0 && x < width && y >= 0 && y < height) {
+                            const idx = y * width + x;
+                            if (grid[idx] & MARKED_MASK) {
+                                const dSq = (x - ship.x) * (x - ship.x) + (y - ship.y) * (y - ship.y);
+                                if (dSq <= rSq) {
+                                    // Mine it!
+                                    if (densityGrid[idx] <= 0) densityGrid[idx] = 100; // Lazy init for existing blocks
+                                    densityGrid[idx] -= 5; // Damage rate
+
+                                    if (densityGrid[idx] <= 0) {
+                                        grid[idx] = EMPTY;
+                                        densityGrid[idx] = 0;
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+
+            // 3. Weapons
+            ship.fireTimer++;
+            if (ship.fireTimer >= ship.fireRate) {
+                if (ship.type === 'APEX') {
+                    // APEX (Missiles)
+                    if (ship.power < 50) return; // Needs power to fire
+
+                    // Find Target
+                    let maxDensity = 0;
+                    let target = null;
+                    const searchRadius = 150;
+                    const cx = ship.x;
+                    const cy = ship.y;
+
+                    // Optimization: Check grid for Creeper
+                    const startX = Math.floor(Math.max(0, cx - searchRadius));
+                    const endX = Math.floor(Math.min(width, cx + searchRadius));
+                    const startY = Math.floor(Math.max(0, cy - searchRadius));
+                    const endY = Math.floor(Math.min(height, cy + searchRadius));
+
+                    // Scan for Creeper
+                    for (let y = startY; y < endY; y += 5) {
+                        for (let x = startX; x < endX; x += 5) {
+                            const idx = y * width + x;
+                            const currentDensity = densityGrid[idx];
+
+                            if ((grid[idx] & TYPE_MASK) === CREEPER && currentDensity > maxDensity) {
+                                const dSq = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+                                if (dSq < searchRadius * searchRadius) {
+                                    if (checkLineOfSight(cx, cy, x, y)) {
+                                        maxDensity = currentDensity;
+                                        target = { x, y };
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (target && maxDensity >= MISSILE_MIN_DENSITY_TARGET) {
+                        const angleToTarget = Math.atan2(target.y - cy, target.x - cx);
+                        const missileSpeed = 2.0;
+
+                        // Launch Missile (isMissile: true)
+                        projectiles.push(new Projectile(
+                            cx, cy,
+                            Math.cos(angleToTarget) * missileSpeed,
+                            Math.sin(angleToTarget) * missileSpeed,
+                            true
+                        ));
+                        ship.fireTimer = 0;
+                        ship.power -= 50; // Consume Power
+                    }
+                } else if (ship.type === 'FIGHTER') {
+                    // FIGHTER (Standard) - Needs Power
+                    if (ship.power < 10) return; // No Power
+
+                    // Find Target
+                    let nearestDist = Infinity;
+                    let target = null;
+                    const searchR = 120;
+                    const cx = ship.x;
+                    const cy = ship.y;
+
+                    const startX = Math.floor(Math.max(0, cx - searchR));
+                    const endX = Math.floor(Math.min(width, cx + searchR));
+                    const startY = Math.floor(Math.max(0, cy - searchR));
+                    const endY = Math.floor(Math.min(height, cy + searchR));
+
+                    for (let y = startY; y < endY; y += 5) {
+                        for (let x = startX; x < endX; x += 5) {
+                            if ((grid[y * width + x] & TYPE_MASK) === CREEPER) {
+                                const d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+                                if (d < nearestDist) {
+                                    if (checkLineOfSight(cx, cy, x, y)) {
+                                        nearestDist = d;
+                                        target = { x, y };
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    if (target && nearestDist < searchR * searchR) {
+                        const angleToTarget = Math.atan2(target.y - cy, target.x - cx);
+                        // Launch Standard Projectile
+                        projectiles.push(new Projectile(
+                            cx, cy,
+                            Math.cos(angleToTarget) * PROJ_SPEED,
+                            Math.sin(angleToTarget) * PROJ_SPEED,
+                            false
+                        ));
+                        ship.fireTimer = 0;
+                        ship.power -= 10; // Consume Power
+                    }
+                } else if (ship.type === 'SPRAYER') {
+                    // SPRAYER (AC Particles)
+                    const range = 150;
+                    let nearestDist = Infinity;
+                    let target = null;
+
+                    const searchR = 150;
+                    const cx = ship.x;
+                    const cy = ship.y;
+                    const startX = Math.floor(Math.max(0, cx - searchR));
+                    const endX = Math.floor(Math.min(width, cx + searchR));
+                    const startY = Math.floor(Math.max(0, cy - searchR));
+                    const endY = Math.floor(Math.min(height, cy + searchR));
+
+                    for (let y = startY; y < endY; y += 5) {
+                        for (let x = startX; x < endX; x += 5) {
+                            if ((grid[y * width + x] & TYPE_MASK) === CREEPER) {
+                                const d = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+                                if (d < nearestDist) {
+                                    if (checkLineOfSight(cx, cy, x, y)) {
+                                        nearestDist = d;
+                                        target = { x, y };
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // Firing Logic
+                    let shouldFire = false;
+                    let fireTarget = null;
+
+                    if (target && nearestDist < range * range) {
+                        shouldFire = true;
+                        fireTarget = target;
+                    } else if (ship.mode === 0) { // Always On
+                        // Fire at move destination if no enemy
+                        shouldFire = true;
+                        fireTarget = { x: ship.targetX, y: ship.targetY };
+                    }
+
+                    if (shouldFire && fireTarget) {
+                        const angleToTarget = Math.atan2(fireTarget.y - cy, fireTarget.x - cx);
+                        // Spread
+                        const spread = (Math.random() - 0.5) * 0.5;
+                        const speed = PROJ_SPEED * 1.5;
+
+                        projectiles.push(new Projectile(
+                            cx, cy,
+                            Math.cos(angleToTarget + spread) * speed,
+                            Math.sin(angleToTarget + spread) * speed,
+                            false,
+                            true // isParticle
+                        ));
+                        ship.fireTimer = 0;
+                    }
+                }
+            }
+        }
+
+        function updatePackets() {
+            for (let i = packets.length - 1; i >= 0; i--) {
+                let p = packets[i];
+                if (p.target.dead || (p.type === 'BUILD' && p.target.built)) {
+                    packets.splice(i, 1);
+                    continue;
+                }
+
+                if (p.target && !p.target.dead) {
+                    const dx = p.target.x - p.x;
+                    const dy = p.target.y - p.y;
+                    const dist = Math.sqrt(dx * dx + dy * dy);
+
+                    if (dist < p.speed) {
+                        // Arrived
+                        if (p.type === 'BUILD') {
+                            p.target.buildProgress += p.value;
+                            if (p.target.buildProgress >= p.target.buildReq) {
+                                p.target.built = true;
+                                p.target.buildProgress = p.target.buildReq;
+                            }
+                        } else if (p.type === 'POWER') {
+                            p.target.power = Math.min(p.target.maxPower, p.target.power + p.value);
+                        }
+                        p.dead = true;
+                    } else {
+                        p.x += (dx / dist) * p.speed;
+                        p.y += (dy / dist) * p.speed;
+                    }
+                } else {
+                    p.dead = true;
+                }
+            }
+            packets = packets.filter(p => !p.dead);
+        }
+
+        function createExplosion(cx, cy, radius, destroyTerrain = false) {
+            const rSq = radius * radius;
+            const startX = Math.floor(cx - radius);
+            const endX = Math.floor(cx + radius);
+            const startY = Math.floor(cy - radius);
+            const endY = Math.floor(cy + radius);
+
+            for (let y = startY; y <= endY; y++) {
+                for (let x = startX; x <= endX; x++) {
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        const distSq = (x - cx) * (x - cx) + (y - cy) * (y - cy);
+                        if (distSq <= rSq) {
+                            const idx = y * width + x;
+                            const type = grid[idx] & TYPE_MASK;
+                            if (destroyTerrain) {
+                                if (type !== WALL) {
+                                    grid[idx] = EMPTY;
+                                    densityGrid[idx] = 0;
+                                }
+                            } else {
+                                // Only destroy liquids
+                                if (type === CREEPER || type === ANTI_CREEPER) {
+                                    grid[idx] = EMPTY;
+                                    densityGrid[idx] = 0;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        function updateProjectiles() {
+            for (let i = projectiles.length - 1; i >= 0; i--) {
+                let p = projectiles[i];
+                p.x += p.vx;
+                p.y += p.vy;
+                p.life--;
+
+                if (p.x < 0 || p.x >= width || p.y < 0 || p.y >= height || p.life <= 0) {
+                    projectiles.splice(i, 1);
+                    continue;
+                }
+
+                const idx = Math.floor(p.y) * width + Math.floor(p.x);
+                const tile = grid[idx] & TYPE_MASK;
+
+                if (p.isParticle) {
+                    // Particle Logic
+                    if (tile !== EMPTY && tile !== AC_PARTICLE) {
+                        // Hit something solid/liquid
+                        // Convert to AC Particle at previous pos (or current if valid)
+                        let px = Math.floor(p.x - p.vx);
+                        let py = Math.floor(p.y - p.vy);
+                        if (px < 0 || px >= width || py < 0 || py >= height) { px = Math.floor(p.x); py = Math.floor(p.y); }
+
+                        const pIdx = py * width + px;
+                        if ((grid[pIdx] & TYPE_MASK) === EMPTY) {
+                            grid[pIdx] = AC_PARTICLE;
+                            densityGrid[pIdx] = 100; // Health/Mass
+                        }
+                        projectiles.splice(i, 1);
+                    }
+                    else if (p.life < 10) {
+                        // End of life, drop as particle
+                        const pIdx = idx;
+                        if ((grid[pIdx] & TYPE_MASK) === EMPTY) {
+                            grid[pIdx] = AC_PARTICLE;
+                            densityGrid[pIdx] = 100;
+                        }
+                        projectiles.splice(i, 1);
+                    }
+                } else {
+                    // Standard Projectile Logic
+                    if (tile === WALL || tile === CREEPER) {
+                        // Use the projectile's stored explosionRadius
+                        createExplosion(p.x, p.y, p.explosionRadius, false); // False = Don't destroy terrain
+                        projectiles.splice(i, 1);
+                    }
+                }
+            }
+        }
+
+        function updateGrid() {
+            frameCount++;
+            for (let y = height - 1; y >= 0; y--) {
+                const startX = frameCount % 2 === 0 ? 0 : width - 1;
+                const endX = frameCount % 2 === 0 ? width : -1;
+                const stepX = frameCount % 2 === 0 ? 1 : -1;
+
+                for (let x = startX; x !== endX; x += stepX) {
+                    const idx = y * width + x;
+                    const type = grid[idx] & TYPE_MASK;
+                    let density = densityGrid[idx];
+
+                    if (type === EMPTY || type === WALL) continue;
+
+                    // --- SOLID PHYSICS (Sand & AC Particles) ---
+                    if (type === SAND || type === AC_PARTICLE) {
+
+                        // AC Particle Reaction
+                        if (type === AC_PARTICLE) {
+                            const neighbors = [(y) * width + (x + 1), (y) * width + (x - 1), (y + 1) * width + x, (y - 1) * width + x];
+                            let reacted = false;
+                            for (let nIdx of neighbors) {
+                                if (nIdx >= 0 && nIdx < grid.length) {
+                                    const nType = grid[nIdx] & TYPE_MASK;
+                                    if (nType !== EMPTY && nType !== AC_PARTICLE) {
+                                        // React!
+                                        grid[idx] = ANTI_CREEPER;
+                                        densityGrid[idx] = AC_PARTICLE_AMOUNT;
+                                        reacted = true;
+                                        break;
+                                    }
+                                }
+                            }
+                            if (reacted) continue;
+                        }
+
+                        const downIdx = (y + 1) * width + x;
+                        if (y + 1 < height) {
+                            if ((grid[downIdx] & TYPE_MASK) === EMPTY || (properties[grid[downIdx] & TYPE_MASK].liquid)) {
+                                const tempType = grid[downIdx];
+                                const tempDens = densityGrid[downIdx];
+                                grid[downIdx] = grid[idx]; // Move with flags
+                                densityGrid[downIdx] = density;
+                                grid[idx] = tempType;
+                                densityGrid[idx] = tempDens;
+                                continue;
+                            }
+                        }
+                        continue;
+                    }
+
+                    // --- LIQUID PHYSICS ---
+                    if (properties[type].liquid) {
+                        // 1. ANNIHILATION
+                        const enemy = (type === CREEPER) ? ANTI_CREEPER : CREEPER;
+                        const neighbors = [(y) * width + (x + 1), (y) * width + (x - 1), (y + 1) * width + x, (y - 1) * width + x];
+                        let interaction = false;
+                        for (let nIdx of neighbors) {
+                            if (nIdx >= 0 && nIdx < grid.length && (grid[nIdx] & TYPE_MASK) === enemy) {
+                                const damage = Math.min(densityGrid[idx], densityGrid[nIdx], 2.0);
+                                densityGrid[idx] -= damage;
+                                densityGrid[nIdx] -= damage;
+                                if (densityGrid[idx] <= 0.01) { grid[idx] = EMPTY; densityGrid[idx] = 0; }
+                                if (densityGrid[nIdx] <= 0.01) { grid[nIdx] = EMPTY; densityGrid[nIdx] = 0; }
+                                interaction = true;
+                                density = densityGrid[idx];
+                            }
+                        }
+                        if (interaction && density <= 0) continue;
+
+                        // 2. MOVEMENT & PRESSURE
+                        let moved = false;
+                        const downIdx = (y + 1) * width + x;
+                        if (y + 1 < height) {
+                            const downType = grid[downIdx] & TYPE_MASK;
+                            if (downType === EMPTY) {
+                                grid[downIdx] = grid[idx]; // Move with flags
+                                densityGrid[downIdx] = density;
+                                grid[idx] = EMPTY;
+                                densityGrid[idx] = 0;
+                                continue;
+                            }
+                            else if (downType === type) {
+                                const spaceBelow = 1.0 - densityGrid[downIdx];
+                                if (spaceBelow > 0.05) {
+                                    const amount = Math.min(density, spaceBelow);
+                                    densityGrid[downIdx] += amount;
+                                    densityGrid[idx] -= amount;
+                                    density = densityGrid[idx];
+                                    if (density <= 0.01) {
+                                        grid[idx] = EMPTY;
+                                        densityGrid[idx] = 0;
+                                        continue;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Pressure Expansion
+                        if (density > 1.0) {
+                            const excess = density - 1.0;
+                            const spreadAmount = excess * 0.5;
+                            const dirs = [1, -1];
+                            if (Math.random() > 0.5) dirs.reverse();
+                            if (density > 2.0) dirs.push(0);
+
+                            for (let dir of dirs) {
+                                let nIdx;
+                                if (dir === 0) nIdx = (y - 1) * width + x;
+                                else nIdx = y * width + (x + dir);
+
+                                if (nIdx >= 0 && nIdx < grid.length) {
+                                    const nType = grid[nIdx] & TYPE_MASK;
+                                    if (nType === EMPTY) {
+                                        grid[nIdx] = grid[idx]; // Spread with flags
+                                        densityGrid[nIdx] += spreadAmount;
+                                        densityGrid[idx] -= spreadAmount;
+                                        density = densityGrid[idx];
+                                        moved = true;
+                                        break;
+                                    }
+                                    else if (nType === type && densityGrid[nIdx] < density) {
+                                        densityGrid[nIdx] += spreadAmount;
+                                        densityGrid[idx] -= spreadAmount;
+                                        density = densityGrid[idx];
+                                        moved = true;
+                                        break;
+                                    }
+                                }
+                            }
+                        }
+
+                        // Natural Sliding
+                        if (!moved && density > 0.01) {
+                            const dir = Math.random() < 0.5 ? -1 : 1;
+                            const sideIdx = y * width + (x + dir);
+                            if (x + dir >= 0 && x + dir < width) {
+                                if ((grid[sideIdx] & TYPE_MASK) === EMPTY) {
+                                    grid[sideIdx] = grid[idx]; // Slide with flags
+                                    densityGrid[sideIdx] = density;
+                                    grid[idx] = EMPTY;
+                                    densityGrid[idx] = 0;
+                                } else if ((grid[sideIdx] & TYPE_MASK) === type && densityGrid[sideIdx] < density - 0.5) {
+                                    const flow = (density - densityGrid[sideIdx]) * 0.1;
+                                    densityGrid[sideIdx] += flow;
+                                    densityGrid[idx] -= flow;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // --- RENDERING ---
+        function draw() {
+            let totalCreeper = 0;
+            let totalAC = 0;
+
+            // 1. Draw Pixel Grid
+            for (let i = 0; i < grid.length; i++) {
+                const rawType = grid[i];
+                const type = rawType & TYPE_MASK;
+                const marked = (rawType & MARKED_MASK) !== 0;
+
+                if (type === EMPTY) {
+                    buf32[i] = 0xff000000;
+                    continue;
+                }
+                const props = properties[type];
+                let r = props.color[0], g = props.color[1], b = props.color[2];
+
+                if (marked) {
+                    // Green tint for marked terrain
+                    g = Math.min(255, g + 100);
+                }
+
+                if (props.solid) {
+                    // Visualize Damage
+                    const health = densityGrid[i];
+                    if (health > 0 && health < 100) {
+                        const darken = (100 - health) / 100; // 0 to 1
+                        const factor = 1 - darken * 0.6;
+                        r *= factor;
+                        g *= factor;
+                        b *= factor;
+                    }
+                }
+
+                if (props.liquid) {
+                    const dens = densityGrid[i];
+                    if (type === CREEPER) {
+                        totalCreeper += dens;
+                        const intensity = Math.min(1.0, dens / 5.0);
+                        r *= intensity; g *= intensity; b = 255 * intensity; // Blue scale
+                    } else if (type === ANTI_CREEPER) {
+                        totalAC += dens;
+                        const intensity = Math.min(1.0, dens / 5.0);
+                        r = 220 * intensity; g = 220 * intensity; b = 255 * intensity;
+                    }
+                }
+                // Texture noise
+                if (!props.liquid) {
+                    const noise = (Math.random() * 20 - 10) | 0;
+                    r += noise; g += noise; b += noise;
+                }
+                buf32[i] = (255 << 24) | (b << 16) | (g << 8) | r;
+            }
+            ctx.putImageData(imgData, 0, 0);
+
+            // Update Stats UI
+            const maxVal = Math.max(totalCreeper, totalAC, 1000); // Min 1000 to avoid div/0 or jumpy bars
+            document.getElementById('val-creeper').innerText = Math.floor(totalCreeper);
+            document.getElementById('val-ac').innerText = Math.floor(totalAC);
+            document.getElementById('bar-creeper').style.width = `${(totalCreeper / maxVal) * 100}%`;
+            document.getElementById('bar-ac').style.width = `${(totalAC / maxVal) * 100}%`;
+
+            // Update Apex Power Bar
+            const apex = entities.find(e => e.type === 'APEX');
+            if (apex) {
+                const pct = (apex.power / apex.maxPower) * 100;
+                document.getElementById('power-bar-fill').style.width = `${pct}%`;
+                document.getElementById('power-text').innerText = `Apex Power: ${Math.floor(apex.power)} / ${apex.maxPower}`;
+            }
+
+            // 2. Draw Projectiles
+            for (let p of projectiles) {
+                if (p.isMissile) {
+                    ctx.fillStyle = '#ff4757'; // Red for Missile
+                    ctx.fillRect(Math.floor(p.x) - 1, Math.floor(p.y) - 1, 3, 3);
+                } else if (p.isParticle) {
+                    ctx.fillStyle = '#00d2d3'; // Cyan for Particle
+                    ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 2, 2);
+                } else {
+                    ctx.fillStyle = '#ffeaa7'; // Yellow for Standard Projectile
+                    ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 2, 2);
+                }
+            }
+
+            // 3. Draw Packets
+            for (let p of packets) {
+                if (p.type === 'POWER') {
+                    ctx.fillStyle = '#f1c40f'; // Yellow/Orange for Power
+                } else {
+                    ctx.fillStyle = '#fff'; // White for Build
+                }
+                ctx.fillRect(Math.floor(p.x), Math.floor(p.y), 2, 2);
+            }
+
+            // 4. Draw Build Range (if constructing)
+            if (currentTool === 'build_fighter' || currentTool === 'build_nullifier' || currentTool === 'build_sprayer') {
+                const apexEntity = entities.find(e => e.type === 'APEX');
+                if (apexEntity) {
+                    ctx.beginPath();
+                    ctx.arc(apexEntity.x, apexEntity.y, BUILD_RANGE, 0, Math.PI * 2);
+                    ctx.strokeStyle = 'rgba(85, 239, 196, 0.2)';
+                    ctx.setLineDash([5, 5]);
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.setLineDash([]);
+                }
+            }
+
+            // Draw Mining Range (Apex)
+            if (apex) {
+                ctx.beginPath();
+                ctx.arc(apex.x, apex.y, apex.miningRange, 0, Math.PI * 2);
+                ctx.strokeStyle = 'rgba(0, 184, 148, 0.2)'; // Green mining circle
+                ctx.lineWidth = 1;
+                ctx.stroke();
+            }
+
+            // 5. Draw Entities
+            for (let ent of entities) {
+                const cx = ent.x;
+                const cy = ent.y;
+
+                if (ent.type === 'APEX' || ent.type === 'FIGHTER' || ent.type === 'SPRAYER') {
+                    ctx.save();
+                    ctx.translate(cx, cy);
+
+                    if (!ent.built) {
+                        ctx.globalAlpha = 0.5; // Ghost
+                    }
+
+                    if (ent.type === 'APEX') {
+                        // Apex Body
+                        ctx.fillStyle = '#fdcb6e'; // Gold (Master Ship)
+                        ctx.fillRect(-5, -7, 10, 14); // Adjusted height
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(-2, -2, 4, 4);
+                        // Missile Launcher detail
+                        ctx.fillStyle = '#ff4757';
+                        ctx.fillRect(-6, -3, 2, 6);
+                        ctx.fillRect(4, -3, 2, 6);
+                    } else if (ent.type === 'FIGHTER') {
+                        // Fighter Body
+                        ctx.fillStyle = '#fab1a0'; // Light Red/Orange (Fighter)
+                        ctx.fillRect(-3, -3, 6, 6);
+                        // Single Gun
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(-1, -4, 2, 3);
+                    } else if (ent.type === 'SPRAYER') {
+                        // Sprayer Body
+                        ctx.fillStyle = '#74b9ff'; // Blue
+                        ctx.fillRect(-3, -3, 6, 6);
+                        // Nozzle
+                        ctx.fillStyle = '#fff';
+                        ctx.fillRect(-1, -5, 2, 4);
+                    }
+
+                    // Build Progress Bar
+                    if (!ent.built) {
+                        ctx.fillStyle = '#555';
+                        ctx.fillRect(-5, -10, 10, 2);
+                        ctx.fillStyle = '#0f0';
+                        ctx.fillRect(-5, -10, 10 * (ent.buildProgress / ent.buildReq), 2);
+                    }
+
+                    // Power Bar (if built and uses power)
+                    if (ent.built && ent.maxPower > 0) {
+                        ctx.fillStyle = '#555';
+                        ctx.fillRect(-5, -8, 10, 2);
+                        ctx.fillStyle = '#f1c40f'; // Yellow
+                        ctx.fillRect(-5, -8, 10 * (ent.power / ent.maxPower), 2);
+                    }
+
+                    // Selection
+                    if (ent === selectedEntity) {
+                        ctx.strokeStyle = '#55efc4';
+                        ctx.lineWidth = 1;
+                        ctx.beginPath();
+                        ctx.arc(0, 0, ent.width + 2, 0, Math.PI * 2);
+                        ctx.stroke();
+
+                        if (ent.targetX !== ent.x || ent.targetY !== ent.y) {
+                            ctx.restore();
+                            ctx.beginPath();
+                            ctx.moveTo(cx, cy);
+                            ctx.lineTo(ent.targetX, ent.targetY);
+                            ctx.strokeStyle = 'rgba(85, 239, 196, 0.3)';
+                            ctx.setLineDash([2, 2]);
+                            ctx.stroke();
+                            ctx.setLineDash([]);
+                            ctx.save();
+                        }
+                    }
+                    ctx.restore();
+
+                } else if (ent.type === 'NULLIFIER') {
+                    ctx.save();
+                    ctx.translate(cx, cy);
+
+                    if (!ent.built) ctx.globalAlpha = 0.5;
+
+                    // Body
+                    ctx.fillStyle = '#a29bfe';
+                    ctx.fillRect(-3, -3, 6, 6);
+                    ctx.strokeStyle = '#fff';
+                    ctx.lineWidth = 1;
+                    ctx.strokeRect(-3, -3, 6, 6);
+
+                    // Charge Indicator
+                    if (ent.built) {
+                        ctx.fillStyle = '#fff';
+                        const h = ent.charge * 6;
+                        ctx.fillRect(-3, 3 - h, 6, h);
+                    }
+
+                    // Build Progress
+                    if (!ent.built) {
+                        ctx.fillStyle = '#000';
+                        ctx.fillRect(-5, 6, 10, 2);
+                        ctx.fillStyle = '#00b894';
+                        const pct = ent.buildProgress / ent.buildReq;
+                        ctx.fillRect(-5, 6, 10 * pct, 2);
+                    }
+
+                    // Beam
+                    if (ent.built && ent.target && ent.charge > 0) {
+                        ctx.restore(); // Go back to world coords
+                        ctx.beginPath();
+                        ctx.moveTo(ent.x, ent.y);
+                        ctx.lineTo(ent.target.x, ent.target.y);
+                        ctx.strokeStyle = `rgba(255, 255, 255, ${ent.charge})`;
+                        ctx.lineWidth = 1 + ent.charge * 3;
+                        ctx.stroke();
+                        ctx.save(); // Just to match the restore below
+                    }
+
+                    ctx.restore();
+
+                } else {
+                    // Draw Emitter
+                    ctx.fillStyle = ent.type === 'AC_EMITTER' ? '#dfe6e9' : '#444';
+                    ctx.fillRect(cx - 3, cy - 3, 6, 6);
+                    const pulse = Math.sin(frameCount * 0.2) * 50 + 200;
+                    ctx.fillStyle = ent.type === 'AC_EMITTER'
+                        ? `rgb(50, 50, ${pulse})`
+                        : `rgb(${pulse}, 50, 50)`;
+                    ctx.fillRect(cx - 1, cy - 1, 2, 2);
+
+                    if (ent === selectedEntity) {
+                        ctx.strokeStyle = '#ffeaa7';
+                        ctx.lineWidth = 1;
+                        ctx.strokeRect(cx - 4, cy - 4, 8, 8);
+                        ctx.beginPath();
+                        ctx.arc(cx, cy, ent.spawnRadius, 0, Math.PI * 2);
+                        ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                        ctx.stroke();
+                    }
+                }
+            }
+        }
+
+        function loop() {
+            updateEntities();
+            updatePackets();
+            updateProjectiles();
+            updateGrid();
+            draw();
+            requestAnimationFrame(loop);
+        }
+
+        // --- LEVEL INITIALIZATION: "Sand & Bunkers" ---
+
+        // 1. Border Walls
+        for (let x = 0; x < width; x++) {
+            setCell(x, 0, WALL);      // Ceiling
+            setCell(x, height - 1, WALL); // Floor
+        }
+        for (let y = 0; y < height; y++) {
+            setCell(0, y, WALL);      // Left Wall
+            setCell(width - 1, y, WALL); // Right Wall
+        }
+
+        // 2. Sand Fill (Bottom Half)
+        for (let y = Math.floor(height / 2); y < height - 1; y++) {
+            for (let x = 1; x < width - 1; x++) {
+                setCell(x, y, SAND);
+            }
+        }
+
+        // 3. Bottom Left Room (Sealed)
+        {
+            const rx = 50, ry = height - 50, rw = 30, rh = 20;
+            // Clear interior
+            for (let y = ry - rh; y <= ry + rh; y++) {
+                for (let x = rx - rw; x <= rx + rw; x++) {
+                    setCell(x, y, EMPTY);
+                }
+            }
+            // Build Walls
+            for (let y = ry - rh - 1; y <= ry + rh + 1; y++) {
+                for (let x = rx - rw - 1; x <= rx + rw + 1; x++) {
+                    if (x < rx - rw || x > rx + rw || y < ry - rh || y > ry + rh) {
+                        setCell(x, y, WALL);
+                    }
+                }
+            }
+            // Emitter
+            let e = new Entity(rx, ry, 'EMITTER');
+            e.spawnAmount = 2.0;
+            e.productionRate = 60;
+            entities.push(e);
+        }
+
+        // 4. Bottom Right Room (Piped)
+        {
+            const rx = width - 50, ry = height - 50, rw = 30, rh = 20;
+            // Clear interior
+            for (let y = ry - rh; y <= ry + rh; y++) {
+                for (let x = rx - rw; x <= rx + rw; x++) {
+                    setCell(x, y, EMPTY);
+                }
+            }
+            // Build Walls
+            for (let y = ry - rh - 1; y <= ry + rh + 1; y++) {
+                for (let x = rx - rw - 1; x <= rx + rw + 1; x++) {
+                    if (x < rx - rw || x > rx + rw || y < ry - rh || y > ry + rh) {
+                        setCell(x, y, WALL);
+                    }
+                }
+            }
+            // Pipe to Surface
+            const pipeX = rx;
+            const pipeW = 2;
+            for (let y = Math.floor(height / 2) - 10; y < ry - rh; y++) {
+                // Clear Pipe
+                for (let x = pipeX - pipeW; x <= pipeX + pipeW; x++) {
+                    setCell(x, y, EMPTY);
+                }
+                // Pipe Walls
+                setCell(pipeX - pipeW - 1, y, WALL);
+                setCell(pipeX + pipeW + 1, y, WALL);
+            }
+
+            // Emitter
+            let e = new Entity(rx, ry, 'EMITTER');
+            e.spawnAmount = 5.0;
+            e.productionRate = 30;
+            entities.push(e);
+        }
+
+        // 5. Player Start
+        entities.push(new Entity(width / 2, 50, 'APEX'));
+
+        updateUI();
+        loop();
+
+    </script>
+</body>
+
+</html>
